@@ -11,14 +11,28 @@ import datetime
 import re
 from time import gmtime, strftime
 
-if len(sys.argv)<1:
-    print('Usage: auto script')
+if len(sys.argv)<2:
+    print('Usage: startPage')
     exit(1)
+
+def log(msg):
+    time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+    print("%s %s" % (time, str(msg)))
+
 
 ShopPsize = 100
 GirlPsize = 100
 CmtPsize = 50
 ReplyPsize = 20
+
+visitedListFile = "vis.txt"
+fvis = open(visitedListFile)
+visited = set([x.strip() for x in fvis.readlines()])
+log("%d shops visited" % len(visited))
+fvis.close()
+
+fvisW = open(visitedListFile, "a")
+
 
 home = "http://fujoho.jp/index.php?"
 shopList = "http://fujoho.jp/index.php?p=shop_list&t=13&b=%d"
@@ -47,14 +61,9 @@ def downloadPic(s, picurl, dir):
         shutil.copyfileobj(pic.raw, out_file)
     del pic
 
-def log(msg):
-    time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
-    print("%s %s" % (time, str(msg)))
-
-
+shopP = int(sys.argv[1])
 with requests.session() as s:
-    shopPages = 1
-    shopP = 0
+    shopPages = shopP+1
     while shopP<shopPages:
         ret0 = s.get(shopList % shopP)
         text = ret0.text
@@ -62,6 +71,9 @@ with requests.session() as s:
         log("now in shoppage %d/%d" % (shopP+1, shopPages))
         girlLists = re.findall(REGS['girlList'], text)
         for (girls, shopId) in girlLists:
+            if shopId in visited:
+                log("shop %s visited, skipped" % shopId)
+                continue
             shopDir = 'data/%s' % shopId
             if not os.path.exists(shopDir):
                 os.makedirs(shopDir)
@@ -83,7 +95,7 @@ with requests.session() as s:
                     pics = re.findall(REGS['girlPic'], textG)
                     for pic in pics:
                         downloadPic(s, pic, girlDir)
-                    writeHTML(textG, "%s/%s.html" % (girlDir, girlId))
+                    writeHTML(textG, "%s/girl_%s.html" % (girlDir, girlId))
                 gp += 1
 
             cmtPages = 1
@@ -98,21 +110,24 @@ with requests.session() as s:
                 cmtsInPage = re.findall(REGS['cmtLink'], text1)
                 for (cmtLink, cmtId) in cmtsInPage:
                     textC = s.get(home+cmtLink).text
-                    writeHTML(textC, "%s/%s.html" % (shopDir, cmtId))
+                    writeHTML(textC, "%s/cmt_%s.html" % (shopDir, cmtId))
                     temp1 = re.findall(REGS['getNum3'], textC)
                     if len(temp1)>0:
                         numReply = int(temp1[0])
                     else:
                         numReply = 0
-                    log("%d replies in comment %s" % (numReply, cmtId))
+                    # log("%d replies in comment %s" % (numReply, cmtId))
                     if numReply>0:
                         replyPages = int((numReply-1)/ReplyPsize)+1
                         rp = 0
                         while rp<replyPages:
-                            textR = s.get((home+replyList+"&b=%d") % (cmtId, rp)).text
-                            writeHTML(textR, "%s/%s_%d.html" % (shopDir, cmtId, rp))
+                            textR = s.get((replyList+"&b=%d") % (cmtId, rp)).text
+                            writeHTML(textR, "%s/cmt_%s_%d.html" % (shopDir, cmtId, rp))
                             rp += 1
                 cp += 1
+            fvisW.write(shopId+"\n")
         shopP += 1
+
+fvisW.close()
 
 
