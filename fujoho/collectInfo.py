@@ -47,6 +47,9 @@ REGS['girlList'] = "(p=shop_girl_list&id=(\d+))"
 REGS['girlLink'] = "(p=girl&id=(\d+))"
 REGS['girlPic'] = "<td><img src=\"(http://img.fujoho.jp/public/img_girl/.*?.jpg)\" class=\"girl-sub-img\""
 REGS['cmtLink'] = "(p=report&id=(\d+))"
+REGS['girlTxt'] = u"<div class=\"panel-header-h panel_header_text panel_header_bg panel_header_border clearfix\">(.*)更新</div>"
+REGS['cmtTxt'] = u"<table class=\"taiken-report\">(.*)マイ口コミ(風俗)に追加</a>"
+REGS['replyTxt'] = "<div class=\"sentence\">(.*)?</div>"
 
 
 def writeHTML(text, fname):
@@ -95,7 +98,9 @@ with requests.session() as s:
                     pics = re.findall(REGS['girlPic'], textG)
                     for pic in pics:
                         downloadPic(s, pic, girlDir)
-                    writeHTML(textG, "%s/girl_%s.html" % (girlDir, girlId))
+                    girlTxt = "\n".join(re.findall(REGS['girlTxt'], textG, re.DOTALL))
+                    # log("girl %s, %d" % (girlId, len(girlTxt)))
+                    writeHTML(girlTxt, "%s/girl_%s.html" % (girlDir, girlId))
                 gp += 1
 
             cmtPages = 1
@@ -110,7 +115,8 @@ with requests.session() as s:
                 cmtsInPage = re.findall(REGS['cmtLink'], text1)
                 for (cmtLink, cmtId) in cmtsInPage:
                     textC = s.get(home+cmtLink).text
-                    writeHTML(textC, "%s/cmt_%s.html" % (shopDir, cmtId))
+                    cmtTxt = "\n".join(re.findall(REGS['cmtTxt'], textC, re.DOTALL))
+                    writeHTML(cmtTxt, "%s/cmt_%s.html" % (shopDir, cmtId))
                     temp1 = re.findall(REGS['getNum3'], textC)
                     if len(temp1)>0:
                         numReply = int(temp1[0])
@@ -122,7 +128,8 @@ with requests.session() as s:
                         rp = 0
                         while rp<replyPages:
                             textR = s.get((replyList+"&b=%d") % (cmtId, rp)).text
-                            writeHTML(textR, "%s/cmt_%s_%d.html" % (shopDir, cmtId, rp))
+                            replyTxt = "\n".join(re.findall(REGS['replyTxt'], textR, re.DOTALL))
+                            writeHTML(replyTxt, "%s/cmt_%s_%d.html" % (shopDir, cmtId, rp))
                             rp += 1
                 cp += 1
             fvisW.write(shopId+"\n")
