@@ -48,8 +48,8 @@ REGS['girlLink'] = "(p=girl&id=(\d+))"
 REGS['girlPic'] = "<td><img src=\"(http://img.fujoho.jp/public/img_girl/.*?.jpg)\" class=\"girl-sub-img\""
 REGS['cmtLink'] = "(p=report&id=(\d+))"
 REGS['girlTxt'] = u"<div class=\"panel-header-h panel_header_text panel_header_bg panel_header_border clearfix\">(.*)更新</div>"
-REGS['cmtTxt'] = u"<table class=\"taiken-report\">(.*)マイ口コミ(風俗)に追加</a>"
-REGS['replyTxt'] = "<div class=\"sentence\">(.*)?</div>"
+REGS['cmtTxt'] = u"<table class=\"taiken-report\">(.*)マイ口コミ"
+REGS['replyTxt'] = "<div class=\"sentence\">(.*?)</div>"
 
 
 def writeHTML(text, fname):
@@ -70,7 +70,7 @@ with requests.session() as s:
     while shopP<shopPages:
         ret0 = s.get(shopList % shopP)
         text = ret0.text
-        shopPages = int((int(re.findall(REGS['getNum1'], text)[0])-1)/ShopPsize)+1
+        shopPages = 11 #int((int(re.findall(REGS['getNum1'], text)[0])-1)/ShopPsize)+1
         log("now in shoppage %d/%d" % (shopP+1, shopPages))
         girlLists = re.findall(REGS['girlList'], text)
         for (girls, shopId) in girlLists:
@@ -84,7 +84,11 @@ with requests.session() as s:
             gp = 0
             while gp<girlPages:
                 text1 = s.get((home+girls+"&b=%d") % gp).text
-                numGirls = int(re.findall(REGS['getNum2'], text1)[0])
+                temp0 = re.findall(REGS['getNum2'], text1)
+                if len(temp0)>0:
+                    numGirls = int(temp0[0])
+                else:
+                    numGirls = 0
                 girlPages = int((numGirls-1)/GirlPsize)+1
                 if gp == 0:
                     log("%d girls in shop %s" % (numGirls, shopId))
@@ -108,7 +112,11 @@ with requests.session() as s:
             while cp<cmtPages:
                 cLink = (cmtList+"&b=%d") % (shopId, cp)
                 text1 = s.get(cLink).text
-                numCmts = int(re.findall(REGS['getNum1'], text1)[0])
+                temp0 = re.findall(REGS['getNum1'], text1)
+                if len(temp0)>0:
+                    numCmts = int(temp0[0])
+                else:
+                    numCmts = 0
                 cmtPages = int((numCmts-1)/CmtPsize)+1
                 if cp == 0:
                     log("%d comments in shop %s" % (numCmts, shopId))
@@ -128,7 +136,7 @@ with requests.session() as s:
                         rp = 0
                         while rp<replyPages:
                             textR = s.get((replyList+"&b=%d") % (cmtId, rp)).text
-                            replyTxt = "\n".join(re.findall(REGS['replyTxt'], textR, re.DOTALL))
+                            replyTxt = "\n\n".join(re.findall(REGS['replyTxt'], textR, re.DOTALL))
                             writeHTML(replyTxt, "%s/cmt_%s_%d.html" % (shopDir, cmtId, rp))
                             rp += 1
                 cp += 1
