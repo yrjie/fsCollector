@@ -70,7 +70,7 @@ with requests.session() as s:
     while shopP<shopPages:
         ret0 = s.get(shopList % shopP)
         text = ret0.text
-        shopPages = 11 #int((int(re.findall(REGS['getNum1'], text)[0])-1)/ShopPsize)+1
+        shopPages = 15 #int((int(re.findall(REGS['getNum1'], text)[0])-1)/ShopPsize)+1
         log("now in shoppage %d/%d" % (shopP+1, shopPages))
         girlLists = re.findall(REGS['girlList'], text)
         for (girls, shopId) in girlLists:
