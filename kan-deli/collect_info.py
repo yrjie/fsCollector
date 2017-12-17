@@ -38,6 +38,11 @@ REGS['b5_jap'] = u'日本語のスキル</th><td>(.*?)</td>'
 REGS['b6_eng'] = u'英語のスキル</th><td>(.*?)</td>'
 REGS['b7_smoke'] = u'喫煙</th><td>(.*?)</td>'
 
+REGS1 = {}
+REGS1['cmtsAll'] = u'<div class="comments">(.*?)<h2 id="comment_form">コメントする'
+REGS1['cmt1'] = u'<p>(.*?)</p>'
+REGS1['web'] = u'<div class="shop_info_right">.*?<a href="(.*?)" title='
+
 class Comment(object):
     def __init__(self):
         self.a0_title = ''
@@ -90,20 +95,45 @@ with requests.session() as s:
     else:
         if not os.path.exists('data/%s' % view_id):
             os.makedirs('data/%s' % view_id)
-        fout = open('data/%s/%s.txt' % (view_id, view_id), 'w')
-        cmt = Comment()
-        for key in REGS:
-            m = re.search(REGS[key], text, re.DOTALL)
-            if not m:
-                continue
-            if 'author' in key:
-                value = m.group(1).encode('utf-8').strip() + ' 総数：' + m.group(2).encode('utf-8').strip()
-            elif 'comment' in key:
-                picurl = home + m.group(1)
-                value = m.group(2).encode('utf-8').strip()
-                download_pic(s, picurl)
-            else:
-                value = m.group(1).encode('utf-8').strip()
-            setattr(cmt, key, value)
-        fout.write(str(cmt))
+            fout1 = open('data/%s/%s.txt' % (view_id, view_id), 'w')
+            cmt = Comment()
+            for key in REGS:
+                m = re.search(REGS[key], text, re.DOTALL)
+                if not m:
+                    continue
+                if 'author' in key:
+                    value = m.group(1).encode('utf-8').strip() + ' 総数：' + m.group(2).encode('utf-8').strip()
+                elif 'comment' in key:
+                    picurl = home + m.group(1)
+                    value = m.group(2).encode('utf-8').strip()
+                    download_pic(s, picurl)
+                else:
+                    value = m.group(1).encode('utf-8').strip()
+                setattr(cmt, key, value)
+            fout1.write(str(cmt))
+            fout1.close()
+
+        fout = open('data/%s/%s_1.txt' % (view_id, view_id), 'w')
+        name = re.findall(REGS['a0_title'], text, re.DOTALL)
+        if len(name)>0:
+            temp = name[0].strip().split(u'の')
+            eroId = temp[0].encode('utf-8')
+        else:
+            eroId = -1
+
+        web = re.findall(REGS1['web'], text)
+        if len(web)>0:
+            webStr = web[0].encode('utf-8')
+        else:
+            webStr = "noUrl"
+
+        allCmt = re.findall(REGS1['cmtsAll'], text, re.DOTALL)
+        if len(allCmt)>0:
+            cmt = '\n\n'.join(re.findall(REGS1['cmt1'], allCmt[0], re.DOTALL)).encode('utf-8')
+        else:
+            cmt = ''
+
+        res = '%s\n%s\n\n%s' % (str(eroId), webStr, cmt)
+
+        fout.write(res)
         fout.close()
